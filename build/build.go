@@ -1,10 +1,11 @@
 package build
 
 import (
-	"github.com/jfrog/build-info-go/entities"
-	buildutils "github.com/jfrog/build-info-go/utils"
 	"os"
 	"strings"
+
+	"github.com/jfrog/build-info-go/entities"
+	"github.com/jfrog/build-info-go/utils"
 )
 
 type Build struct {
@@ -12,7 +13,7 @@ type Build struct {
 	buildNumber       string
 	projectKey        string
 	tempDirPath       string
-	logger            buildutils.Log
+	logger            utils.Log
 	agentName         string
 	agentVersion      string
 	buildAgentVersion string
@@ -20,7 +21,7 @@ type Build struct {
 	buildUrl          string
 }
 
-func NewBuild(buildName, buildNumber, projectKey, tempDirPath string, logger buildutils.Log) *Build {
+func NewBuild(buildName, buildNumber, projectKey, tempDirPath string, logger utils.Log) *Build {
 	return &Build{
 		buildName:   buildName,
 		buildNumber: buildNumber,
@@ -60,6 +61,16 @@ func (b *Build) AddGoModule(srcPath string) (*GoModule, error) {
 	return newGoModule(srcPath, b)
 }
 
+// AddMavenModule adds a Maven module to this Build. Pass srcPath as an empty string if the root of the Maven project is the working directory.
+func (b *Build) AddMavenModule(srcPath string) (*MavenModule, error) {
+	return newMavenModule(b, srcPath)
+}
+
+// AddGradleModule adds a Gradle module to this Build. Pass srcPath as an empty string if the root of the Gradle project is the working directory.
+func (b *Build) AddGradleModule(srcPath string) (*GradleModule, error) {
+	return newGradleModule(b, srcPath)
+}
+
 func (b *Build) CollectEnv() error {
 	envMap := make(map[string]string)
 	for _, e := range os.Environ() {
@@ -69,11 +80,11 @@ func (b *Build) CollectEnv() error {
 		}
 	}
 	partial := &entities.Partial{Env: envMap}
-	return buildutils.SavePartialBuildInfo(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath, partial, b.logger)
+	return utils.SavePartialBuildInfo(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath, partial, b.logger)
 }
 
 func (b *Build) ToBuildInfo() (*entities.BuildInfo, error) {
-	buildInfo, err := buildutils.CreateBuildInfoFromPartials(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
+	buildInfo, err := utils.CreateBuildInfoFromPartials(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +94,7 @@ func (b *Build) ToBuildInfo() (*entities.BuildInfo, error) {
 	buildInfo.Principal = b.principal
 	buildInfo.BuildUrl = b.buildUrl
 
-	generatedBuildsInfo, err := buildutils.GetGeneratedBuildsInfo(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
+	generatedBuildsInfo, err := utils.GetGeneratedBuildsInfo(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -95,5 +106,17 @@ func (b *Build) ToBuildInfo() (*entities.BuildInfo, error) {
 }
 
 func (b *Build) Clean() error {
-	return buildutils.RemoveBuildDir(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
+	return utils.RemoveBuildDir(b.buildName, b.buildNumber, b.projectKey, b.tempDirPath)
+}
+
+func generateEmptyBIFile(containingBuild *Build) (string, error) {
+	buildDir, err := utils.CreateTempBuildFile(containingBuild.buildName, containingBuild.buildNumber, containingBuild.projectKey, containingBuild.tempDirPath)
+	if err != nil {
+		return "", err
+	}
+	if err := buildDir.Close(); err != nil {
+		return "", err
+	}
+	// If this is a Windows machine there is a need to modify the path for the build info file to match Java syntax with double \\
+	return utils.DoubleWinPathSeparator(buildDir.Name()), nil
 }

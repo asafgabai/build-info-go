@@ -6,13 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	buildinfo "github.com/jfrog/build-info-go/entities"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	buildinfo "github.com/jfrog/build-info-go/entities"
+	"github.com/jfrog/jfrog-client-go/utils/log"
 )
 
 const BuildInfoDetails = "details"
@@ -50,12 +52,7 @@ func SaveBuildInfo(buildName, buildNumber, projectKey, buildsDirPath string, bui
 	if err != nil {
 		return
 	}
-	dirPath, err := getBuildDir(buildName, buildNumber, projectKey, buildsDirPath)
-	if err != nil {
-		return
-	}
-	log.Debug("Creating temp build file at: " + dirPath)
-	tempFile, err := ioutil.TempFile(dirPath, "temp")
+	tempFile, err := CreateTempBuildFile(buildName, buildNumber, projectKey, buildsDirPath)
 	if err != nil {
 		return
 	}
@@ -69,6 +66,20 @@ func SaveBuildInfo(buildName, buildNumber, projectKey, buildsDirPath string, bui
 	return
 }
 
+// Create a temp file of build-info.
+func CreateTempBuildFile(buildName, buildNumber, projectKey, buildsDirPath string) (*os.File, error) {
+	dirPath, err := getBuildDir(buildName, buildNumber, projectKey, buildsDirPath)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("Creating temp build file at: " + dirPath)
+	tempFile, err := ioutil.TempFile(dirPath, "temp")
+	if err != nil {
+		return nil, err
+	}
+	return tempFile, nil
+}
+
 func SaveBuildGeneralDetails(buildName, buildNumber, projectKey, buildsDirPath string, log Log) error {
 	partialsBuildDir, err := getPartialsBuildDir(buildName, buildNumber, projectKey, buildsDirPath)
 	if err != nil {
@@ -77,7 +88,7 @@ func SaveBuildGeneralDetails(buildName, buildNumber, projectKey, buildsDirPath s
 	log.Debug("Saving build general details at: " + partialsBuildDir)
 	detailsFilePath := filepath.Join(partialsBuildDir, BuildInfoDetails)
 	var exists bool
-	exists, err = isFileExists(detailsFilePath)
+	exists, err = IsFileExists(detailsFilePath)
 	if err != nil || exists {
 		return err
 	}
@@ -240,7 +251,7 @@ func readBuildInfoGeneralDetails(buildName, buildNumber, projectKey, buildsDirPa
 		return nil, err
 	}
 	generalDetailsFilePath := filepath.Join(partialsBuildDir, BuildInfoDetails)
-	fileExists, err := isFileExists(generalDetailsFilePath)
+	fileExists, err := IsFileExists(generalDetailsFilePath)
 	if err != nil {
 		return nil, err
 	}
