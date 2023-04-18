@@ -16,7 +16,7 @@ const (
 	GradleExtractorFileName          = "build-info-extractor-gradle-%s-uber.jar"
 	gradleInitScriptTemplate         = "gradle.init"
 	GradleExtractorRemotePath        = "org/jfrog/buildinfo/build-info-extractor-gradle/%s"
-	GradleExtractorDependencyVersion = "4.31.7"
+	GradleExtractorDependencyVersion = "4.31.8"
 )
 
 type GradleModule struct {
@@ -38,7 +38,7 @@ type gradleExtractorDetails struct {
 	localPath string
 	// gradle tasks to build the project.
 	tasks []string
-	// Download the extracor from remote server.
+	// Download the extractor from remote server.
 	downloadExtractorFunc func(downloadTo, downloadFrom string) error
 	// Map of configurations for the extractor.
 	props map[string]string
@@ -59,7 +59,7 @@ func newGradleModule(containingBuild *Build, srcPath string) (*GradleModule, err
 		gradleExtractorDetails: &gradleExtractorDetails{
 			localPath: extractorLocalPath,
 			tasks:     []string{"artifactoryPublish"},
-			propsDir:  filepath.Join(containingBuild.tempDirPath, PropertiesTempfolderName),
+			propsDir:  filepath.Join(containingBuild.tempDirPath, PropertiesTempFolderName),
 			props:     map[string]string{},
 		},
 	}, err
@@ -104,7 +104,7 @@ func (gm *GradleModule) CalcDependencies() (err error) {
 }
 
 func (gm *GradleModule) createGradleRunConfig() (*gradleRunConfig, error) {
-	gradleExecPath, err := getGradleExecPath(gm.gradleExtractorDetails.useWrapper)
+	gradleExecPath, err := GetGradleExecPath(gm.gradleExtractorDetails.useWrapper)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +157,7 @@ func getInitScript(gradleDependenciesDir, gradlePluginFilename string) (string, 
 	return initScriptPath, os.WriteFile(initScriptPath, []byte(initScriptContent), 0644)
 }
 
-func getGradleExecPath(useWrapper bool) (string, error) {
+func GetGradleExecPath(useWrapper bool) (string, error) {
 	if useWrapper {
 		execName := "gradlew"
 		if runtime.GOOS == "windows" {

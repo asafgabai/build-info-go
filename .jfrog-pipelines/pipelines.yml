@@ -67,12 +67,12 @@ pipelines:
               JFROG_CLI_BUILD_PROJECT=$JFROG_CLI_BUILD_PROJECT 
               release/build.sh "$NEXT_VERSION"
             - jf rt bag && jf rt bce
-
-            # Commit and publish build-info
-            - jf rt bp $JFROG_CLI_BUILD_NAME $JFROG_CLI_BUILD_NUMBER --dry-run > build-info.json
-            - git add build-info.json
-            - git commit -m "Update build-info file"
             - jf rt bp $JFROG_CLI_BUILD_NAME $JFROG_CLI_BUILD_NUMBER
+
+            # Update build-info.json
+            - ./bi go > build-info.json
+            - git add build-info.json
+            - git commit -m "Update build-info.json file"
 
             # Create a Git tag to the current commit
             - git tag v${NEXT_VERSION}
